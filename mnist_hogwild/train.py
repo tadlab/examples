@@ -4,26 +4,30 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torchvision import datasets, transforms
 
+import pdb
+
 def train(rank, args, model):
     torch.manual_seed(args.seed + rank)
 
     train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST('../data', train=True, download=True,
-                    transform=transforms.Compose([
-                        transforms.ToTensor(),
-                        transforms.Normalize((0.1307,), (0.3081,))
-                    ])),
+        datasets.MNIST('../data', train=False, transform=transforms.ToTensor(), download=True),
+        #datasets.MNIST('../data', train=True, download=True,
+        #            transform=transforms.Compose([
+        #                transforms.ToTensor(),
+        #                transforms.Normalize((0.1307,), (0.3081,))
+        #            ])),
         batch_size=args.batch_size, shuffle=True, num_workers=1)
     test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST('../data', train=False, transform=transforms.Compose([
-                        transforms.ToTensor(),
-                        transforms.Normalize((0.1307,), (0.3081,))
-                    ])),
+        datasets.MNIST('../data', train=False, transform=transforms.ToTensor(), download=True),
+        #datasets.MNIST('../data', train=False, transform=transforms.Compose([
+        #                transforms.ToTensor(),
+        #                transforms.Normalize((0.1307,), (0.3081,))
+        #            ])),
         batch_size=args.batch_size, shuffle=True, num_workers=1)
 
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+    #optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
     for epoch in range(1, args.epochs + 1):
-        train_epoch(epoch, args, model, train_loader, optimizer)
+        train_epoch(epoch, args, model, train_loader, None)
         test_epoch(model, test_loader)
 
 
@@ -31,11 +35,16 @@ def train_epoch(epoch, args, model, data_loader, optimizer):
     model.train()
     pid = os.getpid()
     for batch_idx, (data, target) in enumerate(data_loader):
-        optimizer.zero_grad()
+        #optimizer.zero_grad()
+        pdb.set_trace()
+        data = data.numpy()#torch.tensor(data.numpy())# data.float()
+        #data.type(torch.FloatTensor)
+        data = torch.tensor(data, dtype=torch.float)
         output = model(data)
-        loss = F.nll_loss(output, target)
+        loss = F.mse_loss(output, torch.FloatTensor(target))
+        #loss = F.nll_loss(output, target)
         loss.backward()
-        optimizer.step()
+        #optimizer.step()
         if batch_idx % args.log_interval == 0:
             print('{}\tTrain Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 pid, epoch, batch_idx * len(data), len(data_loader.dataset),
